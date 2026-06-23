@@ -6,9 +6,12 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockTransaction;
 use App\Models\User;
+use App\Services\StockService;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -21,9 +24,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::query()->updateOrCreate(
-            ['email' => 'owner@example.com'],
+            ['email' => 'hilmanhamzi@gmail.com'],
             [
-                'name' => 'Owner',
+                'name' => 'hilman',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ],
@@ -87,5 +90,39 @@ class DatabaseSeeder extends Seeder
                 $product,
             );
         }
+
+        if (! StockTransaction::query()->exists()) {
+            $this->seedStockHistory(app(StockService::class));
+        }
+    }
+
+    private function seedStockHistory(StockService $stockService): void
+    {
+        $keripik = Product::query()->where('name', 'Keripik Singkong')->firstOrFail();
+        $biskuit = Product::query()->where('name', 'Biskuit Cokelat')->firstOrFail();
+        $airMineral = Product::query()->where('name', 'Air Mineral 600ml')->firstOrFail();
+        $tehBotol = Product::query()->where('name', 'Teh Botol')->firstOrFail();
+
+        $transactions = [
+            [$keripik, 'in', 100, 'Stok awal Keripik Singkong', now()->subDays(12)],
+            [$keripik, 'out', 10, 'Penjualan Keripik Singkong', now()->subDays(10)],
+            [$keripik, 'out', 8, 'Penjualan Keripik Singkong', now()->subDays(8)],
+            [$keripik, 'out', 7, 'Penjualan Keripik Singkong', now()->subDays(6)],
+            [$biskuit, 'in', 80, 'Stok awal Biskuit Cokelat', now()->subDays(14)],
+            [$biskuit, 'out', 12, 'Penjualan Biskuit Cokelat', now()->subDays(12)],
+            [$biskuit, 'out', 9, 'Penjualan Biskuit Cokelat', now()->subDays(9)],
+            [$biskuit, 'out', 6, 'Penjualan Biskuit Cokelat', now()->subDays(5)],
+            [$airMineral, 'in', 120, 'Stok awal Air Mineral', now()->subDays(8)],
+            [$airMineral, 'out', 20, 'Penjualan Air Mineral', now()->subDays(6)],
+            [$tehBotol, 'in', 60, 'Stok awal Teh Botol', now()->subDays(3)],
+            [$tehBotol, 'out', 5, 'Penjualan Teh Botol', now()->subDays(1)],
+        ];
+
+        foreach ($transactions as [$product, $type, $quantity, $note, $createdAt]) {
+            Carbon::setTestNow($createdAt);
+            $stockService->recordTransaction($product, $type, $quantity, $note);
+        }
+
+        Carbon::setTestNow();
     }
 }
